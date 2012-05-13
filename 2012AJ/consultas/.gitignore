@@ -1,4 +1,5 @@
-consulta-*.txt
-consulta-*.html
-consulta-*.pdf
-consulta-*.tex
+*.txt
+*.html
+*.pdf
+*.tex
+!header.tex
