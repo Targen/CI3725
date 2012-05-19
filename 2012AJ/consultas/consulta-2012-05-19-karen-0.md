@@ -6,7 +6,7 @@
 
 La expresión regular E3 debería denotar el lenguaje de los identificadores (o nombres) de variables en AsGArD.  El tercer párrafo de la sección 0 del documento de especificación del lenguaje AsGArD dice
 
-    Cada identificador estará formado por una letra seguida de cualquier cantidad de letras y dígitos decimales.
+> Cada identificador estará formado por una letra seguida de cualquier cantidad de letras y dígitos decimales.
 
 Para escribir esa expresión regular (y todas las demás de la revisión teórico-práctica) deberían limitarse a la notación matemática para expresiones regulares que se ha usado en las clases de teoría.  Claro, es bastante incómodo describir conjuntos de caracteres en esa notación como los que se usarían en código con cosas como `[a-zA-Z]`, así que podrían usar una notación abreviada como `a + b + … + z + A + B + … + Z`, o algo por el estilo.
 
