@@ -1,0 +1,295 @@
+Lenguaje:
+
+Los predicados formados por los átomos `t` (*true*) y `f` (*false*), el operador de conjunción `∧`, el operador de negación `¬`, o la asociación con paréntesis, `(` y `)`, todo con las reglas normales de sintaxis de los predicados lógicos.  La operación de conjunción asocia **a la izquierda** y la negación es asociativa.  La negación tiene mayor precedencia que la conjunción.  Como caso especial, la palabra vacía se considera un elemento del lenguaje pero no un predicado válido en general (esto es parte de la definición — **no** es algo que se deduce).
+
+
+
+Gramática intuitiva inicial:
+
+    Sʹ → λ | B
+    B  → B ∧ B | ¬ B | t | f | ( B )
+
+Esta gramática es ambigua.  Como estamos tratando con un lenguaje de expresiones algebráicas con operadores que tienen asociadas precedencias y asociatividades, podemos aplicar la técnica usual para desambiguar gramáticas de operadores:
+
+    Sʹ → B | λ
+    B  → B ∧ C | C
+    C  → ¬ C | F
+    F  → t | f | ( B )
+
+Note que se utiliza recursión por izquierda para el operador de conjunción, debido a que ese operador asocia a la izquierda.  Esta gramática tiene recursión izquierda en el símbolo B, así que no puede ser fuertemente LL(1).  Se realiza el proceso de eliminación de recursión izquierda (en este caso, usando la regla general de eliminación de factorización izquierda que no introduce λ-producciones nuevas):
+
+    Sʹ → B | λ
+    B  → C X | C
+    X  → ∧ C X | ∧ C
+    C  → ¬ C | F
+    F  → t | f | ( B )
+
+Esta gramática tiene símbolos no terminales tales que existen dos producciones distintas con ese no terminal a la izquierda, y que sus lados derechos tienen algún prefijo común no vacío.  Aplicamos factorización izquierda:
+
+    Sʹ → B | λ
+    B  → C Xʹ
+    C  → ¬ C | F
+    F  → t | f | ( B )
+    X  → ∧ C Xʹ
+    Xʹ → X | λ
+
+Esta gramática ahora es fuertemente LL(1).  Expandimos la gramática con el nuevo símbolo inicial que va al anterior símbolo inicial seguido del sentinela (`$`):
+
+    Sʺ → Sʹ $
+    Sʹ → B | λ
+    B  → C Xʹ
+    C  → ¬ C | F
+    F  → t | f | ( B )
+    X  → ∧ C Xʹ
+    Xʹ → X | λ
+
+Ahora podemos calcular los conjuntos *First* de cada símbolo no terminal de la gramática.  Primero, expresamos las relaciones que puedan extraerse de la gramática, y los elementos evidentes:
+
+       ┏━━━━━━━━━━━━━━━━━━━━━━━┓
+       ┃First                  ┃
+    ┏━━╋━━━━━━━━━━━━━━━━━━━━━━━┫
+    ┃Sʺ┃              First(Sʹ)┃
+    ┣━━╉───────────────────────┨
+    ┃Sʹ┃λ             First(B) ┃
+    ┣━━╉───────────────────────┨
+    ┃B ┃              First(C) ┃
+    ┣━━╉───────────────────────┨
+    ┃C ┃  ¬           First(F) ┃
+    ┣━━╉───────────────────────┨
+    ┃F ┃    t f (              ┃
+    ┣━━╉───────────────────────┨
+    ┃Xʹ┃λ             First(X) ┃
+    ┣━━╉───────────────────────┨
+    ┃X ┃∧                      ┃
+    ┗━━┻━━━━━━━━━━━━━━━━━━━━━━━┛
+
+Encontramos el punto fijo de estas definiciones:
+
+       ┏━━━━━━━━━━━┓
+       ┃First      ┃
+    ┏━━╋━━━━━━━━━━━┫
+    ┃Sʺ┃λ ¬ t f (  ┃
+    ┣━━╉───────────┨
+    ┃Sʹ┃λ ¬ t f (  ┃
+    ┣━━╉───────────┨
+    ┃B ┃  ¬ t f (  ┃
+    ┣━━╉───────────┨
+    ┃C ┃  ¬ t f (  ┃
+    ┣━━╉───────────┨
+    ┃F ┃    t f (  ┃
+    ┣━━╉───────────┨
+    ┃Xʹ┃λ         ∧┃
+    ┣━━╉───────────┨
+    ┃X ┃          ∧┃
+    ┗━━┻━━━━━━━━━━━┛
+
+Para calcular los conjuntos *Follow* de cada símbolo no terminal, extraemos de la gramática las relaciones relevantes:
+
+       ┏━━━━━━━━━━━━━━━━━━━━━┓
+       ┃Follow               ┃
+    ┏━━╋━━━━━━━━━━━━━━━━━━━━━┫
+    ┃Sʺ┃                    $┃
+    ┣━━╉─────────────────────┨
+    ┃Sʹ┃                    $┃
+    ┣━━╉─────────────────────┨
+    ┃B ┃Follow(Sʹ)          )┃
+    ┣━━╉─────────────────────┨
+    ┃C ┃First(Xʹ) Follow(X)  ┃
+    ┣━━╉─────────────────────┨
+    ┃F ┃Follow(C)            ┃
+    ┣━━╉─────────────────────┨
+    ┃Xʹ┃Follow(B) Follow(X)  ┃
+    ┣━━╉─────────────────────┨
+    ┃X ┃Follow(Xʹ)           ┃
+    ┗━━┻━━━━━━━━━━━━━━━━━━━━━┛
+
+Para calcularlos, utilizamos los valores ya calculados de los conjuntos *First*, y encontramos el punto fijo de las definiciones resultantes:
+
+       ┏━━━━━━┓
+       ┃Follow┃
+    ┏━━╋━━━━━━┫
+    ┃Sʺ┃$     ┃
+    ┣━━╉──────┨
+    ┃Sʹ┃$     ┃
+    ┣━━╉──────┨
+    ┃B ┃$ )   ┃
+    ┣━━╉──────┨
+    ┃C ┃$ ) ∧ ┃
+    ┣━━╉──────┨
+    ┃F ┃$ ) ∧ ┃
+    ┣━━╉──────┨
+    ┃Xʹ┃$ )   ┃
+    ┣━━╉──────┨
+    ┃X ┃$ )   ┃
+    ┗━━┻━━━━━━┛
+
+
+
+Alternativamente, pueden calcularse simultáneamente los conjuntos *lookahead* de los símbolos no terminales junto con sus conjuntos *Follow*.  **Note que estos conjuntos no son los *First* de cada símbolo no terminal, ni los *lookahead* de cada producción.**  Se extrae toda la información de la gramática y obtenemos las relaciones que nos permitirán calcular los conjuntos:
+
+       ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+       ┃Lookahead                            ┃Follow                           ┃
+    ┏━━╋━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+    ┃Sʺ┃              Lookahead(Sʹ)          │$                                ┃
+    ┣━━╉─────────────────────────────────────┼─────────────────────────────────┨
+    ┃Sʹ┃              Lookahead(B) Follow(Sʹ)│$                                ┃
+    ┣━━╉─────────────────────────────────────┼─────────────────────────────────┨
+    ┃B ┃              Lookahead(C)           │          )   Follow(Sʹ)         ┃
+    ┣━━╉─────────────────────────────────────┼─────────────────────────────────┨
+    ┃C ┃  ¬           Lookahead(F)           │              Lookahead(Xʹ)      ┃
+    ┣━━╉─────────────────────────────────────┼─────────────────────────────────┨
+    ┃F ┃    t f (                            │              Follow(C)          ┃
+    ┣━━╉─────────────────────────────────────┼─────────────────────────────────┨
+    ┃Xʹ┃              Lookahead(X) Follow(Xʹ)│              Follow(B) Follow(X)┃
+    ┣━━╉─────────────────────────────────────┼─────────────────────────────────┨
+    ┃X ┃            ∧                        │              Follow(Xʹ)         ┃
+    ┗━━┻━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┷━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+Encontramos el punto fijo de estas definiciones:
+
+       ┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━┓
+       ┃Lookahead    ┃Follow       ┃
+    ┏━━╋━━━━━━━━━━━━━╇━━━━━━━━━━━━━┫
+    ┃Sʺ┃$ ¬ t f (    │$            ┃
+    ┣━━╉─────────────┼─────────────┨
+    ┃Sʹ┃$ ¬ t f (    │$            ┃
+    ┣━━╉─────────────┼─────────────┨
+    ┃B ┃  ¬ t f (    │$         )  ┃
+    ┣━━╉─────────────┼─────────────┨
+    ┃C ┃  ¬ t f (    │$         ) ∧┃
+    ┣━━╉─────────────┼─────────────┨
+    ┃F ┃    t f (    │$         ) ∧┃
+    ┣━━╉─────────────┼─────────────┨
+    ┃Xʹ┃$         ) ∧│$         )  ┃
+    ┣━━╉─────────────┼─────────────┨
+    ┃X ┃            ∧│$         )  ┃
+    ┗━━┻━━━━━━━━━━━━━┷━━━━━━━━━━━━━┛
+
+
+
+Ahora, para construir la tabla, enumeramos las reglas de la gramática:
+
+1.  Sʺ → Sʹ $
+2.  Sʹ → B
+3.  Sʹ → λ
+4.  B  → C Xʹ
+5.  C  → ¬ C
+6.  C  → F
+7.  F  → t
+8.  F  → f
+9.  F  → ( B )
+10. Xʹ → X
+11. Xʹ → λ
+12. X  → ∧ C Xʹ
+
+Calculando los conjuntos *lookahead* de cada regla con la fórmula
+
+    Lookahead(A → ω) = trunc₁(First(ω)·Follow(A))
+
+o alternativamente con la fórmula
+
+    Lookahead(A → λ ) = Follow(A)
+    Lookahead(A → aω) = {a}
+    Lookahead(A → Bω) = Lookahead(B)
+
+llenamos la tabla para el analizador sintáctico LL(1) usando los números de cada producción si el lado izquierdo de la producción es el símbolo no terminal de la fila, y si el *lookahead* de la producción incluye al símbolo terminal de la columna:
+
+       ┏━━┳━━┳━━┳━━┳━━┳━━┳━━┓
+       ┃ $┃ ¬┃ t┃ f┃ (┃ )┃ ∧┃
+    ┏━━╋━━╇━━╇━━╇━━╇━━╇━━╇━━┫
+    ┃Sʺ┃ 1│ 1│ 1│ 1│ 1│  │  ┃
+    ┣━━╉──┼──┼──┼──┼──┼──┼──┨
+    ┃Sʹ┃ 3│ 2│ 2│ 2│ 2│  │  ┃
+    ┣━━╉──┼──┼──┼──┼──┼──┼──┨
+    ┃B ┃  │ 4│ 4│ 4│ 4│  │  ┃
+    ┣━━╉──┼──┼──┼──┼──┼──┼──┨
+    ┃C ┃  │ 5│ 6│ 6│ 6│  │  ┃
+    ┣━━╉──┼──┼──┼──┼──┼──┼──┨
+    ┃F ┃  │  │ 7│ 8│ 9│  │  ┃
+    ┣━━╉──┼──┼──┼──┼──┼──┼──┨
+    ┃Xʹ┃11│  │  │  │  │11│10┃
+    ┣━━╉──┼──┼──┼──┼──┼──┼──┨
+    ┃X ┃  │  │  │  │  │  │12┃
+    ┗━━┻━━┷━━┷━━┷━━┷━━┷━━┷━━┛
+
+La tabla no incluye conflictos (más de una producción indicada en la misma fila y columna de la tabla), así que la gramática en efecto es fuertemente LL(1).
+
+Un ejemplo de palabra del lenguaje es
+
+    t∧(¬f∧f)∧t
+
+y se puede derivar así:
+
+    ┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+    ┃Pila            ┃    Entrada┃Forma sentencial de la derivación    ┃Acción                    ┃
+    ┣━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+    ┃Sʺ              │t∧(¬f∧f)∧t$│Sʺ                                   │Producción  1: Sʺ → Sʹ $  ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Sʹ            │t∧(¬f∧f)∧t$│Sʹ $                                 │Producción  2: Sʹ → B     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ B             │t∧(¬f∧f)∧t$│B $                                  │Producción  4: B  → C Xʹ  ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ C          │t∧(¬f∧f)∧t$│C Xʹ $                               │Producción  6: C  → F     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ F          │t∧(¬f∧f)∧t$│F Xʹ $                               │Producción  7: F  → t     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ t          │t∧(¬f∧f)∧t$│t Xʹ $                               │Consumir t                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ            │ ∧(¬f∧f)∧t$│t Xʹ $                               │Producción 10: Xʹ → X     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ X             │ ∧(¬f∧f)∧t$│t X                                  │Producción 12: X  → ∧ C Xʹ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ C ∧        │ ∧(¬f∧f)∧t$│t ∧ C Xʹ $                           │Consumir ∧                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ C          │  (¬f∧f)∧t$│t ∧ C Xʹ $                           │Producción  6: C  → F     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ F          │  (¬f∧f)∧t$│t ∧ F Xʹ $                           │Producción  9: F  → ( B ) ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) B (      │  (¬f∧f)∧t$│t ∧ ( B ) Xʹ $                       │Consumir (                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) B        │   ¬f∧f)∧t$│t ∧ ( B ) Xʹ $                       │Producción  4: B  → C Xʹ  ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ C     │   ¬f∧f)∧t$│t ∧ ( C Xʹ ) Xʹ $                    │Producción  5: C  → ¬ C   ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ C ¬   │   ¬f∧f)∧t$│t ∧ ( ¬ C Xʹ ) Xʹ $                  │Consumir ¬                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ C     │    f∧f)∧t$│t ∧ ( ¬ C Xʹ ) Xʹ $                  │Producción  6: C  → F     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ F     │    f∧f)∧t$│t ∧ ( ¬ F Xʹ ) Xʹ $                  │Producción  8: F  → f     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ f     │    f∧f)∧t$│t ∧ ( ¬ f Xʹ ) Xʹ $                  │Consumir f                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ       │     ∧f)∧t$│t ∧ ( ¬ f Xʹ ) Xʹ $                  │Producción 10: Xʹ → X     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) X        │     ∧f)∧t$│t ∧ ( ¬ f X ) Xʹ $                   │Producción 12: X  → ∧ C Xʹ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ C ∧   │     ∧f)∧t$│t ∧ ( ¬ f ∧ C Xʹ ) Xʹ $              │Consumir ∧                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ C     │      f)∧t$│t ∧ ( ¬ f ∧ C Xʹ ) Xʹ $              │Producción  6: C  → F     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ F     │      f)∧t$│t ∧ ( ¬ f ∧ F Xʹ ) Xʹ $              │Producción  8: F  → f     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ f     │      f)∧t$│t ∧ ( ¬ f ∧ f Xʹ ) Xʹ $              │Consumir f                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ ) Xʹ       │       )∧t$│t ∧ ( ¬ f ∧ f Xʹ ) Xʹ $              │Producción 11: Xʹ → λ     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ )          │       )∧t$│t ∧ ( ¬ f ∧ f ) Xʹ $                 │Consumir )                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ            │        ∧t$│t ∧ ( ¬ f ∧ f ) Xʹ $                 │Producción 10: Xʹ → X     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ X             │        ∧t$│t ∧ ( ¬ f ∧ f ) X $                  │Producción 12: X  → ∧ C Xʹ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ C ∧        │        ∧t$│t ∧ ( ¬ f ∧ f ) ∧ C Xʹ $             │Consumir ∧                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ C          │         t$│t ∧ ( ¬ f ∧ f ) ∧ C Xʹ $             │Producción  6: C  → F     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ F          │         t$│t ∧ ( ¬ f ∧ f ) ∧ F Xʹ $             │Producción  7: F  → t     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ t          │         t$│t ∧ ( ¬ f ∧ f ) ∧ t Xʹ $             │Consumir t                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$ Xʹ            │          $│t ∧ ( ¬ f ∧ f ) ∧ t $                │Producción 11: Xʹ → λ     ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃$               │          $│t ∧ ( ¬ f ∧ f ) ∧ t $                │Consumir $                ┃
+    ┠────────────────┼───────────┼─────────────────────────────────────┼──────────────────────────┨
+    ┃                │           │t ∧ ( ¬ f ∧ f ) ∧ t $                │Aceptar                   ┃
+    ┗━━━━━━━━━━━━━━━━┷━━━━━━━━━━━┷━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┷━━━━━━━━━━━━━━━━━━━━━━━━━━┛
